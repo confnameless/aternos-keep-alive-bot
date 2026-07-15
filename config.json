@@ -6,13 +6,9 @@
     "password": ""
   },
   "bot": {
-    "name": "KeepAliveBot",
-    "restartHours": 4
-  },
-  "afk": {
-    "interval": 15
-  },
-  "reconnect": {
-    "delay": 30
+    "stayMin": 30,
+    "stayMax": 180,
+    "gapMin": 5,
+    "gapMax": 30
   }
 }
