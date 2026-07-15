@@ -10,7 +10,7 @@
     "stayMax": 45,
     "leaveGap": 5,
     "tickInterval": 50,
-    "names": ["GOD"]
+    "names": ["GOD", "GOD_", "GOD__"]
   },
   "proxy": {
     "host": "",

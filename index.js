@@ -43,13 +43,12 @@ let stats = { connections: 0, totalUptime: 0, lastConnected: null, kicks: 0 }
 let currentName = ''
 let lastNameUsed = ''
 
+let nameSeq = 0
 function randomName() {
-  let name
-  do {
-    name = names[Math.floor(Math.random() * names.length)]
-  } while (name === lastNameUsed && names.length > 1)
-  lastNameUsed = name
-  return name
+  const base = names[Math.floor(Math.random() * names.length)]
+  nameSeq++
+  lastNameUsed = base
+  return base + '_' + nameSeq
 }
 
 function randInt(min, max) {
