@@ -1,0 +1,9 @@
+name: aternos-bot
+docker:
+  dockerfile: Dockerfile
+  port: 7860
+env:
+  - key: PORT
+    value: "7860"
+regions:
+  - fra

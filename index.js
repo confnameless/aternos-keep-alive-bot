@@ -1,6 +1,7 @@
 import express from 'express'
 import mc from 'minecraft-protocol'
 import fs from 'fs'
+import { SocksClient } from 'socks'
 
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
 let client = null
@@ -42,14 +43,38 @@ function createClient(useName) {
   currentName = useName || randomName()
   lastError = ''
 
-  client = mc.createClient({
+  const opts = {
     host: config.server.host,
     port: config.server.port,
     username: currentName,
     version: config.server.version,
     auth: 'offline',
     hideErrors: true
-  })
+  }
+
+  if (config.proxy && config.proxy.host) {
+    opts.connect = (client) => {
+      SocksClient.createConnection({
+        proxy: {
+          host: config.proxy.host,
+          port: config.proxy.port,
+          type: 5
+        },
+        command: 'connect',
+        destination: {
+          host: config.server.host,
+          port: config.server.port
+        }
+      }).then(info => {
+        client.setSocket(info.socket)
+      }).catch(err => {
+        lastError = 'Proxy: ' + err.message
+        client.emit('error', err)
+      })
+    }
+  }
+
+  client = mc.createClient(opts)
 
   connectTimer = setTimeout(() => {
     if (!client || client.state === mc.states.PLAY) return
