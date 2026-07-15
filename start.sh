@@ -1,19 +1,17 @@
 #!/bin/bash
 set -e
 
-# US Shadowsocks VPN
-SS_HOST="${SS_HOST:-38.65.93.241}"
-SS_PORT="${SS_PORT:-17525}"
-SS_PASS="${SS_PASS:-9992b78c6a1122b3aa364721af799807}"
-SS_METHOD="${SS_METHOD:-aes-256-gcm}"
+# Finland Shadowsocks VPN (fastest)
+SS_HOST="${SS_HOST:-31.76.80.205}"
+SS_PORT="${SS_PORT:-8388}"
+SS_PASS="${SS_PASS:-cAqbBYBB0f9CAmpU_mc_7FyvvLCcwzt0}"
+SS_METHOD="${SS_METHOD:-chacha20-ietf-poly1305}"
 
-ss-local \
-  -s "$SS_HOST" \
-  -p "$SS_PORT" \
+/usr/local/bin/sslocal \
+  -s "$SS_HOST:$SS_PORT" \
   -k "$SS_PASS" \
   -m "$SS_METHOD" \
-  -l 1080 \
-  -b 127.0.0.1 &
+  -b "127.0.0.1:1080" &
 
 sleep 3
 node index.js

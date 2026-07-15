@@ -67,6 +67,7 @@ function createClient(useName) {
         }
       }).then(info => {
         client.setSocket(info.socket)
+        client.emit('connect')
       }).catch(err => {
         lastError = 'Proxy: ' + err.message
         client.emit('error', err)
