@@ -292,11 +292,6 @@ function startPositionUpdates() {
 
 function startTickUpdates() {
   if (tickTimer) clearInterval(tickTimer)
-  const interval = config.bot.tickInterval || 50
-  tickTimer = setInterval(() => {
-    if (!client || client.state !== mc.states.PLAY) return
-    safeWrite('tick_end', {})
-  }, interval)
 }
 
 function scheduleLeave() {
