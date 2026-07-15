@@ -194,9 +194,9 @@ function createClient(useName) {
 
   connectTimer = setTimeout(() => {
     if (!client || client.state === mc.states.PLAY) return
-    lastError = 'Connection timed out'
+    lastError = 'Connection timed out (15s)'
     if (client) { intentionalLeave = false; try { client.end() } catch (_) {} }
-  }, 10000)
+  }, 15000)
 
   client.on('playerJoin', () => {
     if (connectTimer) clearTimeout(connectTimer)
