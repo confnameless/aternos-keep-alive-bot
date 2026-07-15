@@ -28,6 +28,7 @@ let failStreak = 0
 let useDirect = true
 let triedVpn = true
 let connecting = false
+let lastKickReason = ''
 
 const defaultNames = [
   'xX_Builder_Xx', 'NightOwl_27', 'CraftMaster_', 'PixelPanda_',
@@ -227,6 +228,7 @@ function createClient(useName) {
     if (connectTimer) clearTimeout(connectTimer)
     connecting = false
     failStreak = 0
+    lastKickReason = ''
     if (!config.vpns || !config.vpns.length) triedVpn = false
     lastError = ''
     safeWrite('settings', {
@@ -310,6 +312,7 @@ function createClient(useName) {
       try { reason = JSON.stringify(reason).substring(0, 500) } catch(e) { reason = String(reason) }
     }
     lastError = 'Kicked: ' + reason
+    lastKickReason = reason
     stats.kicks++
     console.error('KICK:', reason)
   })
@@ -354,10 +357,13 @@ function scheduleReconnect(reason) {
     gap = (config.bot.leaveGap || 5) * 1000
   } else {
     failStreak++
-    const base = Math.min(60000, 5000 * Math.pow(2, Math.min(failStreak, 4)))
-    const jitter = Math.random() * 0.3 + 0.85
+    const isDup = lastKickReason.includes('duplicate_login')
+    const baseMs = isDup ? 15000 : 5000
+    const base = Math.min(120000, baseMs * Math.pow(2, Math.min(failStreak, 4)))
+    const jitter = Math.random() * 0.4 + 0.8
     gap = Math.round(base * jitter)
   }
+  lastKickReason = ''
   retryAt = Date.now() + gap
   reconnectTimer = setTimeout(() => {
     retryAt = null
