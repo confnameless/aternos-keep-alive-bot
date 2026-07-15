@@ -8,6 +8,7 @@ let reconnectTimer = null
 let restartTimer = null
 let posTimer = null
 let posX = 0, posY = 64, posZ = 0
+let connectedAt = null
 
 function createClient() {
   if (client) {
@@ -27,6 +28,8 @@ function createClient() {
   client.on('playerJoin', () => {
     console.log(`[+] Logged in as ${client.username}`)
     sendClientSettings()
+
+    connectedAt = Date.now()
 
     if (config.server.password) {
       setTimeout(() => client.chat(`/login ${config.server.password}`), 2000)
@@ -75,6 +78,7 @@ function createClient() {
 
   client.on('end', () => {
     console.log('[-] Disconnected')
+    connectedAt = null
     scheduleReconnect()
   })
 }
@@ -129,8 +133,8 @@ const app = express()
 app.get('/', (req, res) => {
   const status = client ? (client.state === mc.states.PLAY ? 'connected' : 'connecting') : 'offline'
   let uptime = 'N/A'
-  if (client && client.connectTime) {
-    uptime = Math.floor((Date.now() - client.connectTime) / 1000) + 's'
+  if (connectedAt) {
+    uptime = Math.floor((Date.now() - connectedAt) / 1000) + 's'
   }
   res.json({
     status,
