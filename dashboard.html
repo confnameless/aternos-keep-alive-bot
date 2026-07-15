@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: #1e293b; border-radius: 16px; padding: 32px; width: 400px; max-width: 90vw; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+h1 { font-size: 24px; margin-bottom: 24px; text-align: center; color: #f1f5f9; }
+h1 span { color: #3b82f6; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 14px; color: #94a3b8; margin-bottom: 6px; }
+input { width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 16px; outline: none; }
+input:focus { border-color: #3b82f6; }
+.btn { width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn:hover { background: #2563eb; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-danger { background: #ef4444; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: #22c55e; }
+.btn-success:hover { background: #16a34a; }
+.btn-warning { background: #f59e0b; }
+.btn-warning:hover { background: #d97706; }
+.error { color: #ef4444; font-size: 14px; text-align: center; margin-top: 8px; display: none; }
+.hidden { display: none; }
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.stat { background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; }
+.stat-label { font-size: 12px; color: #64748b; }
+.stat-value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+.stat-value.connected { color: #22c55e; }
+.stat-value.offline { color: #ef4444; }
+.stat-value.retrying { color: #f59e0b; }
+.btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.loading { text-align: center; padding: 20px; color: #64748b; }
+.footer { text-align: center; margin-top: 16px; font-size: 12px; color: #475569; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+.badge.on { background: #22c55e; color: #052e16; }
+.badge.off { background: #64748b; color: #0f172a; }
+</style>
+</head>
+<body>
+<div class="card" id="loginCard">
+  <h1>🔐 <span>Bot</span> Dashboard</h1>
+  <div class="form-group">
+    <label>API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+  </div>
+  <button class="btn" onclick="login()">Login</button>
+  <div class="error" id="loginError">Invalid key</div>
+</div>
+
+<div class="card hidden" id="dashboardCard">
+  <h1>🤖 <span>Bot</span> Dashboard <span class="badge" id="enabledBadge"></span></h1>
+  <div class="status-grid">
+    <div class="stat"><div class="stat-label">Status</div><div class="stat-value" id="statusText">—</div></div>
+    <div class="stat"><div class="stat-label">Uptime</div><div class="stat-value" id="uptimeText">—</div></div>
+    <div class="stat"><div class="stat-label">Connections</div><div class="stat-value" id="connText">0</div></div>
+    <div class="stat"><div class="stat-label">Kicks</div><div class="stat-value" id="kicksText">0</div></div>
+  </div>
+  <div style="font-size:13px;color:#64748b;text-align:center;margin-bottom:4px;">
+    Name: <span id="nameText">—</span> &middot; VPN: <span id="vpnText">—</span>
+  </div>
+  <div style="font-size:13px;color:#64748b;text-align:center;margin-bottom:16px;">
+    Leave in: <span id="leaveText">—</span> &middot; Retry in: <span id="retryText">—</span>
+  </div>
+  <div style="font-size:13px;color:#ef4444;text-align:center;margin-bottom:16px;min-height:18px" id="errorText"></div>
+  <div class="btn-group">
+    <button class="btn btn-success" id="startBtn" onclick="startBot()">▶ Start</button>
+    <button class="btn btn-danger" id="stopBtn" onclick="stopBot()">■ Stop</button>
+    <button class="btn btn-warning" onclick="restartBot()">⟳ Restart</button>
+  </div>
+  <div class="footer">Auto-refreshes every 5s &middot; <a href="#" onclick="logout();return false" style="color:#3b82f6">Logout</a></div>
+</div>
+
+<script>
+let apiKey = ''
+let refreshTimer = null
+
+function login() {
+  apiKey = document.getElementById('apiKeyInput').value.trim()
+  if (!apiKey) return
+  document.getElementById('loginError').style.display = 'none'
+  fetch('/', { headers: { 'x-api-key': apiKey } })
+    .then(r => r.ok ? r.json() : Promise.reject('unauthorized'))
+    .then(data => {
+      document.getElementById('loginCard').classList.add('hidden')
+      document.getElementById('dashboardCard').classList.remove('hidden')
+      updateDashboard(data)
+      if (refreshTimer) clearInterval(refreshTimer)
+      refreshTimer = setInterval(refreshStatus, 5000)
+    })
+    .catch(() => {
+      document.getElementById('loginError').style.display = 'block'
+    })
+}
+
+function refreshStatus() {
+  fetch('/', { headers: { 'x-api-key': apiKey } })
+    .then(r => r.json())
+    .then(updateDashboard)
+    .catch(() => {})
+}
+
+function updateDashboard(data) {
+  document.getElementById('statusText').textContent = data.status || '—'
+  document.getElementById('statusText').className = 'stat-value ' + (data.status === 'connected' ? 'connected' : data.status === 'retrying' ? 'retrying' : 'offline')
+  document.getElementById('uptimeText').textContent = data.uptime || '—'
+  document.getElementById('connText').textContent = data.stats?.connections ?? '0'
+  document.getElementById('kicksText').textContent = data.stats?.kicks ?? '0'
+  document.getElementById('nameText').textContent = data.name || '—'
+  document.getElementById('vpnText').textContent = data.vpn || '—'
+  document.getElementById('leaveText').textContent = data.leaveIn || '—'
+  document.getElementById('retryText').textContent = data.retryIn || '—'
+  document.getElementById('errorText').textContent = data.error || ''
+
+  const enabled = data.enabled !== false
+  document.getElementById('enabledBadge').textContent = enabled ? 'ON' : 'OFF'
+  document.getElementById('enabledBadge').className = 'badge ' + (enabled ? 'on' : 'off')
+  document.getElementById('startBtn').disabled = enabled
+  document.getElementById('stopBtn').disabled = !enabled
+}
+
+function startBot() {
+  fetch('/start', { method: 'POST', headers: { 'x-api-key': apiKey } })
+    .then(r => r.json()).then(refreshStatus)
+}
+
+function stopBot() {
+  fetch('/stop', { method: 'POST', headers: { 'x-api-key': apiKey } })
+    .then(r => r.json()).then(refreshStatus)
+}
+
+function restartBot() {
+  fetch('/restart', { method: 'POST', headers: { 'x-api-key': apiKey } })
+    .then(r => r.json()).then(refreshStatus)
+}
+
+function logout() {
+  clearInterval(refreshTimer)
+  document.getElementById('dashboardCard').classList.add('hidden')
+  document.getElementById('loginCard').classList.remove('hidden')
+  document.getElementById('apiKeyInput').value = ''
+  apiKey = ''
+}
+</script>
+</body>
+</html>

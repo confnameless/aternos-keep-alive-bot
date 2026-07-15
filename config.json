@@ -8,11 +8,22 @@
   "bot": {
     "stayMin": 10,
     "stayMax": 45,
-    "leaveGap": 5
+    "leaveGap": 5,
+    "tickInterval": 2000
   },
   "proxy": {
     "host": "127.0.0.1",
     "port": 1080,
     "type": "socks5"
-  }
+  },
+  "apiKey": "c257c0c56dd5a749af90af97c5510643",
+  "vpns": [
+    {
+      "label": "Finland",
+      "host": "31.76.80.205",
+      "port": 8388,
+      "password": "cAqbBYBB0f9CAmpU_mc_7FyvvLCcwzt0",
+      "method": "chacha20-ietf-poly1305"
+    }
+  ]
 }
