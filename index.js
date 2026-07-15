@@ -26,7 +26,7 @@ let replacingClient = false
 let intentionalLeave = false
 let failStreak = 0
 let useDirect = true
-let triedVpn = false
+let triedVpn = true
 let connecting = false
 
 const defaultNames = [
@@ -106,16 +106,28 @@ async function stopVpnAsync() {
   currentVpn = null
 }
 
+async function getFreePort() {
+  return new Promise((resolve) => {
+    const srv = net.createServer()
+    srv.listen(0, '127.0.0.1', () => {
+      const port = srv.address().port
+      srv.close(() => resolve(port))
+    })
+    srv.on('error', () => resolve(1080))
+  })
+}
+
 async function startVpn(vpn) {
   if (!vpn) return
   await stopVpnAsync()
   currentVpn = vpn
   const pass = process.env.VPN_PASSWORD || vpn.password
+  const localPort = await getFreePort()
   sslocalProcess = spawn('sslocal', [
     '-s', `${vpn.host}:${vpn.port}`,
     '-k', pass,
     '-m', vpn.method || 'chacha20-ietf-poly1305',
-    '-b', '127.0.0.1:1080'
+    '-b', `127.0.0.1:${localPort}`
   ], { stdio: ['ignore', 'pipe', 'pipe'] })
 
   sslocalProcess.on('exit', (code) => {
@@ -125,12 +137,14 @@ async function startVpn(vpn) {
     }
   })
 
-  const ok = await waitForPort('127.0.0.1', 1080)
+  const ok = await waitForPort('127.0.0.1', localPort)
   if (!ok) {
-    lastError = 'sslocal failed to bind :1080'
+    lastError = 'sslocal failed to bind :' + localPort
     stopVpnAsync()
     return false
   }
+  config.proxy.host = '127.0.0.1'
+  config.proxy.port = localPort
   return true
 }
 
@@ -175,7 +189,7 @@ function createClient(useName) {
   if (config.proxy && config.proxy.host) {
     opts.connect = (client) => {
       SocksClient.createConnection({
-        proxy: { host: config.proxy.host, port: config.proxy.port, type: 5 },
+        proxy: { host: config.proxy.host, port: config.proxy.port || 1080, type: 5 },
         command: 'connect',
         destination: { host: config.server.host, port: config.server.port }
       }).then(info => {
@@ -213,7 +227,7 @@ function createClient(useName) {
     if (connectTimer) clearTimeout(connectTimer)
     connecting = false
     failStreak = 0
-    triedVpn = false
+    if (!config.vpns || !config.vpns.length) triedVpn = false
     lastError = ''
     safeWrite('settings', {
       locale: 'en_US',
@@ -359,7 +373,6 @@ async function fallbackToVpn() {
     client = null
     replacingClient = false
   }
-  config.proxy.host = '127.0.0.1'
   if (!currentVpn) {
     const v = await selectFastestVpn()
     if (v) await startVpn(v)
@@ -506,5 +519,19 @@ process.on('unhandledRejection', (e) => { lastError = 'unhandled: ' + String(e);
 
 const PORT = process.env.PORT || 7860
 app.listen(PORT, '0.0.0.0', () => {
-  createClient()
+  startWithVpn()
 })
+
+async function startWithVpn() {
+  const vpns = config.vpns || []
+  if (vpns.length) {
+    const v = await selectFastestVpn()
+    if (v) {
+      const ok = await startVpn(v)
+      if (!ok) triedVpn = false
+    }
+  } else {
+    triedVpn = false
+  }
+  createClient()
+}
