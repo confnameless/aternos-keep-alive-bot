@@ -31,6 +31,8 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
+let connectTimer = null
+
 function createClient(useName) {
   if (client) {
     client.end()
@@ -46,11 +48,17 @@ function createClient(useName) {
     username: currentName,
     version: config.server.version,
     auth: 'offline',
-    hideErrors: true,
-    connectTimeout: 8000
+    hideErrors: true
   })
 
+  connectTimer = setTimeout(() => {
+    if (!client || client.state === mc.states.PLAY) return
+    lastError = 'Connection timed out'
+    if (client) client.end()
+  }, 10000)
+
   client.on('playerJoin', () => {
+    if (connectTimer) clearTimeout(connectTimer)
     lastError = ''
     sendClientSettings()
     connectedAt = Date.now()
@@ -84,6 +92,7 @@ function createClient(useName) {
   client.on('player_chat', () => {})
 
   client.on('error', (err) => {
+    if (connectTimer) clearTimeout(connectTimer)
     if (err.code === 'ECONNREFUSED') {
       lastError = 'Server offline'
     } else {
@@ -93,6 +102,7 @@ function createClient(useName) {
   })
 
   client.on('end', () => {
+    if (connectTimer) clearTimeout(connectTimer)
     connectedAt = null
     leaveAt = null
     scheduleReconnect()
@@ -141,6 +151,7 @@ function scheduleReconnect() {
   if (reconnectTimer) clearTimeout(reconnectTimer)
   if (leaveTimer) clearTimeout(leaveTimer)
   if (posTimer) clearInterval(posTimer)
+  if (connectTimer) clearTimeout(connectTimer)
   connectedAt = null
   leaveAt = null
 
