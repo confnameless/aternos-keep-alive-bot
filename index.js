@@ -14,7 +14,6 @@ let client = null
 let reconnectTimer = null
 let leaveTimer = null
 let posTimer = null
-let tickTimer = null
 let botEnabled = true
 let posX = 0, posY = 64, posZ = 0
 let connectedAt = null
@@ -220,7 +219,6 @@ function createClient(useName) {
     stats.connections++
     stats.lastConnected = Date.now()
     startPositionUpdates()
-    startTickUpdates()
     scheduleLeave()
   })
 
@@ -298,15 +296,6 @@ function startPositionUpdates() {
   }, 30000)
 }
 
-function startTickUpdates() {
-  if (tickTimer) clearInterval(tickTimer)
-  const interval = config.bot.tickInterval || 50
-  tickTimer = setInterval(() => {
-    if (!client || client.state !== mc.states.PLAY) return
-    safeWrite('tick_end', {})
-  }, interval)
-}
-
 function scheduleLeave() {
   if (leaveTimer) clearTimeout(leaveTimer)
   const stayMin = config.bot.stayMin || 10
@@ -323,7 +312,6 @@ function scheduleReconnect(reason) {
   if (reconnectTimer) clearTimeout(reconnectTimer)
   if (leaveTimer) clearTimeout(leaveTimer)
   if (posTimer) clearInterval(posTimer)
-  if (tickTimer) clearInterval(tickTimer)
   if (connectTimer) clearTimeout(connectTimer)
   connectedAt = null
   leaveAt = null
@@ -361,7 +349,6 @@ function stopBot() {
   if (reconnectTimer) clearTimeout(reconnectTimer)
   if (leaveTimer) clearTimeout(leaveTimer)
   if (posTimer) clearInterval(posTimer)
-  if (tickTimer) clearInterval(tickTimer)
   if (connectTimer) clearTimeout(connectTimer)
   if (client) {
     try { client.end() } catch (_) {}
