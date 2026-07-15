@@ -202,17 +202,6 @@ function createClient(useName) {
     if (connectTimer) clearTimeout(connectTimer)
     failStreak = 0
     lastError = ''
-    safeWrite('settings', {
-      locale: 'en_US',
-      viewDistance: 2,
-      chatFlags: 0,
-      chatColors: true,
-      skinParts: 0x7f,
-      mainHand: 1,
-      enableTextFiltering: false,
-      enableServerListing: false,
-      particleStatus: 'minimal'
-    })
     connectedAt = Date.now()
     stats.connections++
     stats.lastConnected = Date.now()
