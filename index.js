@@ -354,7 +354,9 @@ function scheduleReconnect(reason) {
     gap = (config.bot.leaveGap || 5) * 1000
   } else {
     failStreak++
-    gap = Math.min(60000, 5000 * Math.pow(2, Math.min(failStreak, 4)))
+    const base = Math.min(60000, 5000 * Math.pow(2, Math.min(failStreak, 4)))
+    const jitter = Math.random() * 0.3 + 0.85
+    gap = Math.round(base * jitter)
   }
   retryAt = Date.now() + gap
   reconnectTimer = setTimeout(() => {
@@ -533,5 +535,7 @@ async function startWithVpn() {
   } else {
     triedVpn = false
   }
+  const delay = Math.random() * 15000
+  await new Promise(r => setTimeout(r, delay))
   createClient()
 }
