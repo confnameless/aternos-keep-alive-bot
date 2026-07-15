@@ -283,8 +283,13 @@ function createClient(useName) {
   })
 
   client.on('kick_disconnect', (packet) => {
-    lastError = 'Kicked: ' + (packet.reason || 'unknown')
+    let reason = packet.reason || 'unknown'
+    if (typeof reason === 'object') {
+      try { reason = JSON.stringify(reason).substring(0, 500) } catch(e) { reason = String(reason) }
+    }
+    lastError = 'Kicked: ' + reason
     stats.kicks++
+    console.error('KICK:', reason)
   })
 }
 
