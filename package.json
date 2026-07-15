@@ -1,0 +1,13 @@
+{
+  "name": "aternos-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "minecraft-protocol": "github:PrismarineJS/node-minecraft-protocol#pc26_2",
+    "minecraft-data": "^3.111.0"
+  }
+}

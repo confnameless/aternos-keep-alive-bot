@@ -1,0 +1,18 @@
+{
+  "server": {
+    "host": "confnameless.aternos.me",
+    "port": 57785,
+    "version": "26.2",
+    "password": ""
+  },
+  "bot": {
+    "name": "KeepAliveBot",
+    "restartHours": 4
+  },
+  "afk": {
+    "interval": 15
+  },
+  "reconnect": {
+    "delay": 30
+  }
+}
