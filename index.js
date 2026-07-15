@@ -27,6 +27,7 @@ let intentionalLeave = false
 let failStreak = 0
 let useDirect = true
 let triedVpn = false
+let connecting = false
 
 const defaultNames = [
   'xX_Builder_Xx', 'NightOwl_27', 'CraftMaster_', 'PixelPanda_',
@@ -150,6 +151,8 @@ let connectTimer = null
 
 function createClient(useName) {
   if (!botEnabled) return
+  if (connecting) return
+  connecting = true
   if (client) {
     replacingClient = true
     try { client.end() } catch (_) {}
@@ -188,24 +191,27 @@ function createClient(useName) {
   try {
     client = mc.createClient(opts)
   } catch (err) {
+    connecting = false
     lastError = 'createClient: ' + err.message
     if (botEnabled) scheduleReconnect('error')
     return
   }
 
   connectTimer = setTimeout(() => {
-    if (!client || client.state === mc.states.PLAY) return
+    if (!client || client.state === mc.states.PLAY) { connecting = false; return }
     lastError = 'Connection timed out (15s)'
     if (!triedVpn && config.vpns && config.vpns.length) {
       triedVpn = true
       fallbackToVpn()
       return
     }
+    if (leaveTimer) clearTimeout(leaveTimer)
     if (client) { intentionalLeave = false; try { client.end() } catch (_) {} }
   }, 15000)
 
   client.on('playerJoin', () => {
     if (connectTimer) clearTimeout(connectTimer)
+    connecting = false
     failStreak = 0
     triedVpn = false
     lastError = ''
@@ -273,9 +279,11 @@ function createClient(useName) {
 
   client.on('end', () => {
     if (connectTimer) clearTimeout(connectTimer)
+    if (leaveTimer) clearTimeout(leaveTimer)
     if (connectedAt) stats.totalUptime += Date.now() - connectedAt
     connectedAt = null
     leaveAt = null
+    connecting = false
     if (botEnabled && !replacingClient) {
       scheduleReconnect(intentionalLeave ? 'leave' : 'error')
       intentionalLeave = false
