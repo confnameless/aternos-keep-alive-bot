@@ -338,7 +338,14 @@ function scheduleReconnect(reason) {
 
 async function fallbackToVpn() {
   lastError = 'Direct failed, starting VPN...'
-  if (client) { try { client.end() } catch (_) {} client = null }
+  if (reconnectTimer) clearTimeout(reconnectTimer)
+  if (connectTimer) clearTimeout(connectTimer)
+  if (client) {
+    replacingClient = true
+    try { client.end() } catch (_) {}
+    client = null
+    replacingClient = false
+  }
   config.proxy.host = '127.0.0.1'
   if (!currentVpn) {
     const v = await selectFastestVpn()
