@@ -196,6 +196,11 @@ function createClient(useName) {
   connectTimer = setTimeout(() => {
     if (!client || client.state === mc.states.PLAY) return
     lastError = 'Connection timed out (15s)'
+    if (!triedVpn && config.vpns && config.vpns.length) {
+      triedVpn = true
+      fallbackToVpn()
+      return
+    }
     if (client) { intentionalLeave = false; try { client.end() } catch (_) {} }
   }, 15000)
 
