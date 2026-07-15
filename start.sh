@@ -7,7 +7,7 @@ SS_PORT="${SS_PORT:-8388}"
 SS_PASS="${SS_PASS:-cAqbBYBB0f9CAmpU_mc_7FyvvLCcwzt0}"
 SS_METHOD="${SS_METHOD:-chacha20-ietf-poly1305}"
 
-/usr/local/bin/sslocal \
+sslocal \
   -s "$SS_HOST:$SS_PORT" \
   -k "$SS_PASS" \
   -m "$SS_METHOD" \
