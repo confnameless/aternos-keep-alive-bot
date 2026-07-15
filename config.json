@@ -9,10 +9,11 @@
     "stayMin": 10,
     "stayMax": 45,
     "leaveGap": 5,
-    "tickInterval": 2000
+    "tickInterval": 50,
+    "names": ["AFK_Builds_"]
   },
   "proxy": {
-    "host": "127.0.0.1",
+    "host": "",
     "port": 1080,
     "type": "socks5"
   },

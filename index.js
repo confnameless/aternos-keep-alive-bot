@@ -26,6 +26,8 @@ let sslocalProcess = null
 let replacingClient = false
 let intentionalLeave = false
 let failStreak = 0
+let useDirect = true
+let triedVpn = false
 
 const defaultNames = [
   'xX_Builder_Xx', 'NightOwl_27', 'CraftMaster_', 'PixelPanda_',
@@ -201,6 +203,7 @@ function createClient(useName) {
   client.on('playerJoin', () => {
     if (connectTimer) clearTimeout(connectTimer)
     failStreak = 0
+    triedVpn = false
     lastError = ''
     safeWrite('settings', {
       locale: 'en_US',
@@ -254,6 +257,11 @@ function createClient(useName) {
     if (connectTimer) clearTimeout(connectTimer)
     if (err.code === 'ECONNREFUSED') {
       lastError = 'Server offline'
+      if (!triedVpn) {
+        triedVpn = true
+        fallbackToVpn()
+        return
+      }
     } else {
       lastError = err.message
       if (connectedAt) stats.kicks++
@@ -333,6 +341,19 @@ function scheduleReconnect(reason) {
     retryAt = null
     createClient()
   }, gap)
+}
+
+async function fallbackToVpn() {
+  lastError = 'Direct failed, starting VPN...'
+  if (client) { try { client.end() } catch (_) {} client = null }
+  config.proxy.host = '127.0.0.1'
+  if (!currentVpn) {
+    const v = await selectFastestVpn()
+    if (v) await startVpn(v)
+  } else {
+    await startVpn(currentVpn)
+  }
+  scheduleReconnect('error')
 }
 
 function stopBot() {
@@ -472,10 +493,6 @@ process.on('uncaughtException', (e) => { lastError = 'uncaught: ' + e.message; c
 process.on('unhandledRejection', (e) => { lastError = 'unhandled: ' + String(e); console.error(e) })
 
 const PORT = process.env.PORT || 7860
-app.listen(PORT, '0.0.0.0', async () => {
-  const fastest = await selectFastestVpn()
-  if (fastest) {
-    await startVpn(fastest)
-  }
+app.listen(PORT, '0.0.0.0', () => {
   createClient()
 })
