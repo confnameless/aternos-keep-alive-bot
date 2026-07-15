@@ -205,17 +205,6 @@ function createClient(useName) {
     failStreak = 0
     triedVpn = false
     lastError = ''
-    safeWrite('settings', {
-      locale: 'en_US',
-      viewDistance: 2,
-      chatFlags: 0,
-      chatColors: true,
-      skinParts: 0x7f,
-      mainHand: 1,
-      enableTextFiltering: false,
-      enableServerListing: false,
-      particleStatus: 'minimal'
-    })
     connectedAt = Date.now()
     stats.connections++
     stats.lastConnected = Date.now()
@@ -300,11 +289,6 @@ function startPositionUpdates() {
 
 function startTickUpdates() {
   if (tickTimer) clearInterval(tickTimer)
-  const interval = config.bot.tickInterval || 50
-  tickTimer = setInterval(() => {
-    if (!client || client.state !== mc.states.PLAY) return
-    safeWrite('tick_end', {})
-  }, interval)
 }
 
 function scheduleLeave() {

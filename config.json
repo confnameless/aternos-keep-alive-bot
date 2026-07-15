@@ -2,7 +2,7 @@
   "server": {
     "host": "confnameless.aternos.me",
     "port": 57785,
-    "version": "1.21.4",
+    "version": "26.2",
     "password": ""
   },
   "bot": {
