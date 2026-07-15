@@ -10,6 +10,8 @@ let posTimer = null
 let posX = 0, posY = 64, posZ = 0
 let connectedAt = null
 let lastError = ''
+let retryAt = null
+let leaveAt = null
 
 const names = [
   'xX_Builder_Xx', 'NightOwl_27', 'CraftMaster_', 'PixelPanda_',
@@ -44,7 +46,8 @@ function createClient(useName) {
     username: currentName,
     version: config.server.version,
     auth: 'offline',
-    hideErrors: true
+    hideErrors: true,
+    connectTimeout: 8000
   })
 
   client.on('playerJoin', () => {
@@ -91,6 +94,7 @@ function createClient(useName) {
 
   client.on('end', () => {
     connectedAt = null
+    leaveAt = null
     scheduleReconnect()
   })
 }
@@ -126,7 +130,9 @@ function scheduleLeave() {
   const stayMin = config.bot.stayMin || 10
   const stayMax = config.bot.stayMax || 60
   const stay = randomInt(stayMin, stayMax) * 60 * 1000
+  leaveAt = Date.now() + stay
   leaveTimer = setTimeout(() => {
+    leaveAt = null
     if (client) client.end()
   }, stay)
 }
@@ -135,23 +141,22 @@ function scheduleReconnect() {
   if (reconnectTimer) clearTimeout(reconnectTimer)
   if (leaveTimer) clearTimeout(leaveTimer)
   if (posTimer) clearInterval(posTimer)
+  connectedAt = null
+  leaveAt = null
 
-  const gap = config.bot.leaveGap || 5
-  reconnectTimer = setTimeout(() => createClient(), gap * 1000)
+  const gap = (config.bot.leaveGap || 5) * 1000
+  retryAt = Date.now() + gap
+  reconnectTimer = setTimeout(() => {
+    retryAt = null
+    createClient()
+  }, gap)
 }
 
 const app = express()
 
-function timeLeft(timer) {
-  if (!timer) return null
-  const left = Math.ceil((timer._idleStart + timer._idleTimeout - Date.now()) / 1000)
-  return left > 0 ? left : null
-}
-
 app.get('/', (req, res) => {
   const connected = client && client.state === mc.states.PLAY
-  const retryIn = timeLeft(reconnectTimer)
-  const leaveIn = timeLeft(leaveTimer)
+  const retryIn = retryAt ? Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)) : null
 
   let status = 'offline'
   if (client) {
@@ -160,12 +165,14 @@ app.get('/', (req, res) => {
     else status = 'connecting'
   }
 
+  const leaveInNum = leaveAt ? Math.max(0, Math.ceil((leaveAt - Date.now()) / 1000)) : null
+
   res.json({
     status,
     name: connected ? currentName : null,
     uptime: connectedAt ? Math.floor((Date.now() - connectedAt) / 1000) + 's' : null,
     retryIn: retryIn ? retryIn + 's' : null,
-    leaveIn: leaveIn ? leaveIn + 's' : null,
+    leaveIn: leaveInNum ? leaveInNum + 's' : null,
     error: lastError || null
   })
 })
