@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: aternos-keep-alive-bot
+    env: docker
+    repo: https://github.com/confnameless/aternos-keep-alive-bot
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 10000
