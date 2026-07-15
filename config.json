@@ -6,9 +6,8 @@
     "password": ""
   },
   "bot": {
-    "stayMin": 30,
-    "stayMax": 180,
-    "gapMin": 5,
-    "gapMax": 30
+    "stayMin": 10,
+    "stayMax": 45,
+    "leaveGap": 5
   }
 }

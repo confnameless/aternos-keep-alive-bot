@@ -9,6 +9,7 @@ let leaveTimer = null
 let posTimer = null
 let posX = 0, posY = 64, posZ = 0
 let connectedAt = null
+let lastError = ''
 
 const names = [
   'xX_Builder_Xx', 'NightOwl_27', 'CraftMaster_', 'PixelPanda_',
@@ -35,7 +36,7 @@ function createClient(useName) {
   }
 
   currentName = useName || randomName()
-  console.log(`[*] Attempting join as ${currentName}`)
+  lastError = ''
 
   client = mc.createClient({
     host: config.server.host,
@@ -47,16 +48,11 @@ function createClient(useName) {
   })
 
   client.on('playerJoin', () => {
-    console.log(`[+] ${currentName} joined`)
+    lastError = ''
     sendClientSettings()
     connectedAt = Date.now()
     startPositionUpdates()
     scheduleLeave()
-
-    if (config.server.password) {
-      setTimeout(() => client.chat(`/login ${config.server.password}`), 2000)
-      setTimeout(() => client.chat(`/register ${config.server.password} ${config.server.password}`), 2000)
-    }
   })
 
   client.on('position', (packet) => {
@@ -72,7 +68,6 @@ function createClient(useName) {
 
   client.on('system_chat', (packet) => {
     const msg = packet.formattedMessage || packet.content || ''
-    console.log('[CHAT]', typeof msg === 'string' ? msg : JSON.stringify(msg))
     if (config.server.password) {
       const lower = (typeof msg === 'string' ? msg : JSON.stringify(msg)).toLowerCase()
       if (lower.includes('register')) {
@@ -83,23 +78,18 @@ function createClient(useName) {
     }
   })
 
-  client.on('player_chat', (packet) => {
-    console.log('[CHAT]', packet.message || packet.formattedMessage || '')
-  })
+  client.on('player_chat', () => {})
 
   client.on('error', (err) => {
     if (err.code === 'ECONNREFUSED') {
-      console.log('[!] Server offline')
+      lastError = 'Server offline'
+    } else {
+      lastError = err.message
     }
     scheduleReconnect()
   })
 
   client.on('end', () => {
-    if (connectedAt) {
-      console.log(`[-] ${currentName} left (was online ${Math.floor((Date.now() - connectedAt) / 60000)}m)`)
-    } else {
-      console.log('[-] Disconnected')
-    }
     connectedAt = null
     scheduleReconnect()
   })
@@ -133,13 +123,10 @@ function startPositionUpdates() {
 
 function scheduleLeave() {
   if (leaveTimer) clearTimeout(leaveTimer)
-  const stayMin = config.bot.stayMin || 30
-  const stayMax = config.bot.stayMax || 180
+  const stayMin = config.bot.stayMin || 10
+  const stayMax = config.bot.stayMax || 60
   const stay = randomInt(stayMin, stayMax) * 60 * 1000
-  console.log(`[*] Will leave in ${Math.floor(stay / 60000)}m`)
   leaveTimer = setTimeout(() => {
-    console.log(`[*] ${currentName} leaving...`)
-    connectedAt = null
     if (client) client.end()
   }, stay)
 }
@@ -149,26 +136,37 @@ function scheduleReconnect() {
   if (leaveTimer) clearTimeout(leaveTimer)
   if (posTimer) clearInterval(posTimer)
 
-  const gapMin = config.bot.gapMin || 5
-  const gapMax = config.bot.gapMax || 30
-  const gap = randomInt(gapMin, gapMax) * 60 * 1000
-  console.log(`[*] Rejoining in ${Math.floor(gap / 60000)}m`)
-  reconnectTimer = setTimeout(() => createClient(), gap)
+  const gap = config.bot.leaveGap || 5
+  reconnectTimer = setTimeout(() => createClient(), gap * 1000)
 }
 
 const app = express()
 
+function timeLeft(timer) {
+  if (!timer) return null
+  const left = Math.ceil((timer._idleStart + timer._idleTimeout - Date.now()) / 1000)
+  return left > 0 ? left : null
+}
+
 app.get('/', (req, res) => {
-  const status = client ? (client.state === mc.states.PLAY ? 'connected' : 'connecting') : 'offline'
-  let uptime = 'N/A'
-  if (connectedAt) {
-    uptime = Math.floor((Date.now() - connectedAt) / 1000) + 's'
+  const connected = client && client.state === mc.states.PLAY
+  const retryIn = timeLeft(reconnectTimer)
+  const leaveIn = timeLeft(leaveTimer)
+
+  let status = 'offline'
+  if (client) {
+    if (connected) status = 'connected'
+    else if (retryIn) status = 'retrying'
+    else status = 'connecting'
   }
+
   res.json({
     status,
-    name: currentName || 'N/A',
-    uptime,
-    leaveIn: leaveTimer ? Math.ceil((leaveTimer._idleStart + leaveTimer._idleTimeout - Date.now()) / 1000) + 's' : 'N/A'
+    name: connected ? currentName : null,
+    uptime: connectedAt ? Math.floor((Date.now() - connectedAt) / 1000) + 's' : null,
+    retryIn: retryIn ? retryIn + 's' : null,
+    leaveIn: leaveIn ? leaveIn + 's' : null,
+    error: lastError || null
   })
 })
 
@@ -181,6 +179,5 @@ app.get('/restart', (req, res) => {
 
 const PORT = process.env.PORT || 7860
 app.listen(PORT, () => {
-  console.log(`[*] Web server on :${PORT}`)
   createClient()
 })
